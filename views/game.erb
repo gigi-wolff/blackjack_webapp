@@ -51,7 +51,7 @@
 </div>
 
 <p>  
-<% if @show_hit_or_stay_buttons && hand_total(session[:player_cards]) != 21 %>
+<% if @show_hit_or_stay_buttons && !@player_has_blackjack %>
   What would <%= session[:player_name]%> like to do?
   <br/>
   <form id='hit_form' action='/game/player/hit' method='post'>

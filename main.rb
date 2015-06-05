@@ -31,9 +31,22 @@ helpers do
 
   def card_image(card) #['4',hearts']
     suit = card[1]
-    value =card[0]
+    value = card[0]
     "<img src='/images/cards/#{suit}_#{value}.jpg' class='card_image' >"
   end
+
+  def who_won(player_total_value,dealer_total_value)
+    if (player_total_value > BLACKJACK)
+      'dealer'
+    elsif (dealer_total_value > player_total_value && dealer_total_value <= BLACKJACK)
+      'dealer'
+    elsif (dealer_total_value == player_total_value)
+      'tie'
+    elsif (dealer_total_value > BLACKJACK || dealer_total_value < player_total_value) 
+      'player'
+    end
+  end  
+
 end
 
 before do
@@ -72,9 +85,10 @@ get '/game' do
   session[:player_cards] << session[:deck].pop
   session[:dealer_cards] << session[:deck].pop
   session[:player_cards] << session[:deck].pop
-  session[:dealer_cards] << session[:deck].pop    
-  
-  redirect '/dealers_turn' if (hand_total(session[:player_cards])==BLACKJACK)
+  session[:dealer_cards] << session[:deck].pop
+
+  @player_has_blackjack = true if hand_total(session[:player_cards])==BLACKJACK
+  redirect '/dealers_turn' if @player_has_blackjack
   erb :game
 end
 
@@ -86,20 +100,15 @@ get '/dealers_turn' do
   dealer_total = hand_total(session[:dealer_cards])
   player_total = hand_total(session[:player_cards])
   
-  if player_total > BLACKJACK
-    @error = "Sorry #{session[:player_name]}, you've busted with #{player_total}." 
-  elsif (dealer_total < DEALER_STAYS_VALUE)
+  if dealer_total < DEALER_STAYS_VALUE && player_total <= BLACKJACK   
     @show_dealer_hit_button = true
     @play_again_button = false
-  elsif (dealer_total > player_total && dealer_total <= BLACKJACK)
-    @error = "Sorry #{session[:player_name]}, Dealer wins with #{dealer_total} ."
-  elsif (dealer_total == player_total)
-    @success = "#{session[:player_name]}, you and Dealer both have #{player_total}. Its a push."
-  elsif (dealer_total > BLACKJACK || dealer_total < player_total)
-    @success = "Congratulations #{session[:player_name]}! You win with #{player_total}!"
   else
-    @play_again_button = false #no one won, game not over
-  end   
+    winner = who_won(player_total,dealer_total)
+    @success = "Congratulations #{session[:player_name]}! You win with #{player_total}!" if winner=='player'
+    @success = "#{session[:player_name]}, you and Dealer both have #{player_total}. Its a push."if winner=='tie'
+    @error = "Sorry #{session[:player_name]}, you've lost with #{player_total}, dealer has #{dealer_total}." if winner=='dealer'
+  end
 
   erb :game
 end
@@ -113,6 +122,7 @@ post '/game/player/hit' do
   @dealers_playing = false
   session[:player_cards] << session[:deck].pop
   player_total = hand_total(session[:player_cards])
+  @player_has_blackjack = true if player_total==BLACKJACK
   redirect '/dealers_turn' if (player_total>=BLACKJACK)
   erb :game  
 end
