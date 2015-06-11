@@ -7,7 +7,8 @@ use Rack::Session::Cookie, :key => 'rack.session',
                            :path => '/',
                            :secret => 'but_why'
 BLACKJACK = 21
-DEALER_STAYS_VALUE =17
+DEALER_STAYS_VALUE = 17
+STARTING_PLAYER_BANK = 500
 
 helpers do
   def hand_total(hand)
@@ -37,12 +38,15 @@ helpers do
 
   def who_won(player_total_value,dealer_total_value)
     if (player_total_value > BLACKJACK)
+      session[:player_bank] = session[:player_bank] - session[:player_bet]
       'dealer'
     elsif (dealer_total_value > player_total_value && dealer_total_value <= BLACKJACK)
+      session[:player_bank] = session[:player_bank] - session[:player_bet]
       'dealer'
     elsif (dealer_total_value == player_total_value)
       'tie'
     elsif (dealer_total_value > BLACKJACK || dealer_total_value < player_total_value) 
+      session[:player_bank] = session[:player_bank] + session[:player_bet]
       'player'
     end
   end  
@@ -62,6 +66,7 @@ get '/' do
 end
 
 get '/new_player' do
+  session[:player_bank] = STARTING_PLAYER_BANK
   erb :new_player
 end
 
@@ -70,9 +75,29 @@ post '/new_player' do
     @error = "Name is required"
     halt erb(:new_player)
   end
-  session[:player_name] = params[:player_name]  
-  redirect '/game'
+  session[:player_name] = params[:player_name] 
+  params[:player_name] = "Bob" 
+  redirect '/bet'
 end
+
+get '/bet' do
+  session[:player_bet] = nil
+  erb :bet
+end
+
+post '/bet' do
+  if params[:amount_bet].nil? || session[:player_bank].to_i == 0 
+    @error = "Must place a bet"
+    halt erb(:bet)
+  elsif params[:amount_bet].to_i > session[:player_bank]
+    @error = "You cannot bet more than $#{session[:player_bank]}"
+    halt erb(:bet)
+  else
+    session[:player_bet] = params[:amount_bet].to_i
+    redirect '/game'
+  end
+end
+
 
 get '/game' do
   #set up init values and deal init cards
@@ -105,12 +130,12 @@ get '/dealers_turn' do
     @play_again_button = false
   else
     winner = who_won(player_total,dealer_total)
-    @success = "Congratulations #{session[:player_name]}! You win with #{player_total}!" if winner=='player'
-    @success = "#{session[:player_name]}, you and Dealer both have #{player_total}. Its a push."if winner=='tie'
-    @error = "Sorry #{session[:player_name]}, you've lost with #{player_total}, dealer has #{dealer_total}." if winner=='dealer'
+    @winner = "Congratulations #{session[:player_name]}! You win with #{player_total}!" if winner=='player'
+    @winner = "#{session[:player_name]}, you and Dealer both have #{player_total}. Its a push."if winner=='tie'
+    @loser = "Sorry #{session[:player_name]}, you've lost with #{player_total}, dealer has #{dealer_total}." if winner=='dealer'
   end
 
-  erb :game
+  erb :game, layout: false
 end
 
 post '/game/dealer/hit' do
@@ -124,7 +149,7 @@ post '/game/player/hit' do
   player_total = hand_total(session[:player_cards])
   @player_has_blackjack = true if player_total==BLACKJACK
   redirect '/dealers_turn' if (player_total>=BLACKJACK)
-  erb :game  
+  erb :game, layout: false
 end
 
 post '/game/player/stay' do
