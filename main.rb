@@ -76,7 +76,6 @@ post '/new_player' do
     halt erb(:new_player)
   end
   session[:player_name] = params[:player_name] 
-  params[:player_name] = "Bob" 
   redirect '/bet'
 end
 
@@ -85,9 +84,12 @@ get '/bet' do
   erb :bet
 end
 
-post '/bet' do
-  if params[:amount_bet].nil? || session[:player_bank].to_i == 0 
+post '/bet' do  
+  if params[:amount_bet]=="" || params[:amount_bet] == "0"
     @error = "Must place a bet"
+    halt erb(:bet)
+  elsif session[:player_bank] == 0
+    @error = "You don't have any money left to play with. You must start over to continue playing." 
     halt erb(:bet)
   elsif params[:amount_bet].to_i > session[:player_bank]
     @error = "You cannot bet more than $#{session[:player_bank]}"
