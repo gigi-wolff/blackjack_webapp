@@ -38,7 +38,7 @@
       
     <p>
       <% if @show_dealer_hit_button %>
-        <h5>Total is  <%= hand_total(session[:dealer_cards]) %> and he will hit. </h5>
+        <h5>Total is  <%= hand_total(session[:dealer_cards]) %> and dealer will hit. </h5>
         <form id='dealer_hit_form' action='/game/dealer/hit' method='post'>
           <input type='submit' class='btn btn-primary' value='Click to see card ==>'/>
         </form>

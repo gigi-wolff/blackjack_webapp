@@ -85,8 +85,8 @@ get '/bet' do
 end
 
 post '/bet' do  
-  if params[:amount_bet]=="" || params[:amount_bet] == "0"
-    @error = "Must place a bet"
+  if params[:amount_bet]=="" || params[:amount_bet] <= "0"
+    @error = "Must place a valid bet"
     halt erb(:bet)
   elsif session[:player_bank] == 0
     @error = "You don't have any money left to play with. You must start over to continue playing." 
